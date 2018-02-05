@@ -9,18 +9,21 @@ thoughts_agg <- read.csv("a1228449.csv", header = T, fill=TRUE,row.names=NULL)
 thoughts <- read.csv("f1228449.csv", header = T, fill=TRUE,row.names=NULL)
 thoughts %>% select(X_unit_id, negative_yn, thoughtcat, text) -> thought2
 
+thoughts_agg %>% select(X_unit_id, negative_yn, negative_yn.confidence, thoughtcat, thoughtcat.confidence, text) -> thought_agg2
+
 #crowdflower agreement
 #Once a job is complete, all of the judgments on a row of data will be aggregated with a confidence score. 
 #The confidence score describes the level of agreement between multiple contributors (weighted by each contributors’ trust scores), and indicates our “confidence” in the validity of the aggregated answer for each row of data. The aggregate result is chosen based on the response with the greatest confidence.
 mean(thoughts_agg$negative_yn.confidence)   
 # 0.8573093
 
-#remove na and 0 
-#filter(thoughts_agg, thoughtcat.confidence != "0" ) -> thought_cat
+#remove na and 0 because user who selected 'no neg thought' at first step did not do any labeling on second step, therefore, 0 should be treated
+#as NA
+thought_agg2$thoughtcat.confidence[is.na(thoughts_agg$thoughtcat.confidence)] <- 0
+filter(thoughts_agg, thoughtcat.confidence != "0" ) -> thought_cat
 
-thoughts_agg$thoughtcat.confidence[is.na(thoughts_agg$thoughtcat.confidence)] <- 0
 mean(thought_cat$thoughtcat.confidence, na.rm = TRUE)
-#0.751999
+#0.7535739
 
 
 #recode label
