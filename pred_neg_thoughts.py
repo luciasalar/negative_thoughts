@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.model_selection import GridSearchCV
-
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, confusion_matrix
 
 data = pd.read_csv('a1228449.csv')
 data2 = data[['negative_yn','thoughtcat','text']]
@@ -66,6 +66,15 @@ y_pred = classifier.predict(x_test)
 
 cm = confusion_matrix(y_test, y_pred)
 
+
+print(f1_score(y_test, y_pred, average="macro"))
+print(precision_score(y_test, y_pred, average="macro"))
+print(recall_score(y_test, y_pred, average="macro"))   
+
+# 0.587878787879
+# 0.601785714286
+# 0.6 
+
 ######
 from sklearn.naive_bayes import MultinomialNB
 nclf = MultinomialNB().fit(x_train, y_train)
@@ -116,43 +125,51 @@ np.mean(y_pred == y_test)
 
 #0.5
 
+print(f1_score(y_test, y_pred, average="macro"))
+print(precision_score(y_test, y_pred, average="macro"))
+print(recall_score(y_test, y_pred, average="macro")) 
+
+# 0.535714285714
+# 0.546875
+# 0.546875
+
 ###################################
 #combine only 'yes' label with the first sample
 
-data_s2_y = data_s2[data_s2['negative_yn'] == 'no']
+# data_s2_y = data_s2[data_s2['negative_yn'] == 'no']
 
 
-data4 = data2.append(data_s2_y)
-data4 = data4.drop_duplicates(subset = ['text'],keep = 'last')
+# data4 = data2.append(data_s2_y)
+# data4 = data4.drop_duplicates(subset = ['text'],keep = 'last')
 
-# Creating the Bag of Words model
+# # Creating the Bag of Words model
 
-cv = CountVectorizer()
-x = cv.fit_transform(data4['text']).toarray()
-y = data4.iloc[:, 0].values
-
-
-#convert label to number 
-labelencoder = LabelEncoder()
-y = labelencoder.fit_transform(y.astype(str))
-y[y == 0] = 2 #replace mix with yes
-
-####convert to tfidf
-tfidf_transformer = TfidfTransformer()
-x = tfidf_transformer.fit_transform(x).toarray()
+# cv = CountVectorizer()
+# x = cv.fit_transform(data4['text']).toarray()
+# y = data4.iloc[:, 0].values
 
 
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.20, random_state = 0)
+# #convert label to number 
+# labelencoder = LabelEncoder()
+# y = labelencoder.fit_transform(y.astype(str))
+# y[y == 0] = 2 #replace mix with yes
 
-# Fitting Naive Bayes to the Training set
-classifier = GaussianNB()
-classifier.fit(x_train, y_train)
+# ####convert to tfidf
+# tfidf_transformer = TfidfTransformer()
+# x = tfidf_transformer.fit_transform(x).toarray()
 
-# Predicting the Test set results
-y_pred = classifier.predict(x_test)
 
-cm = confusion_matrix(y_test, y_pred)
-np.mean(y_pred == y_test)
+# x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.20, random_state = 0)
+
+# # Fitting Naive Bayes to the Training set
+# classifier = GaussianNB()
+# classifier.fit(x_train, y_train)
+
+# # Predicting the Test set results
+# y_pred = classifier.predict(x_test)
+
+# cm = confusion_matrix(y_test, y_pred)
+# np.mean(y_pred == y_test)
 
 #0.58823529411764708
 
@@ -160,9 +177,9 @@ from sklearn.linear_model import SGDClassifier
 ###fit svm
 classifier = SGDClassifier(alpha=0.0001, average=False, class_weight=None, epsilon=0.1,
        eta0=0.0, fit_intercept=True, l1_ratio=0.15,
-       learning_rate='optimal', loss='hinge', max_iter=None, n_iter=None,
+       learning_rate='optimal', loss='hinge',
        n_jobs=1, penalty='l2', power_t=0.5, random_state=None,
-       shuffle=True, tol=None, verbose=0, warm_start=False)
+       shuffle=True, verbose=0, warm_start=False)
 classifier.fit(x_train, y_train)
 
 # Predicting the Test set results
@@ -171,7 +188,7 @@ y_pred = classifier.predict(x_test)
 cm = confusion_matrix(y_test, y_pred)
 np.mean(y_pred == y_test)
 
-#0.68627450980392157
+#0.53448275862068961
 
 from sklearn.model_selection import cross_val_score
 accuracies = cross_val_score(estimator = classifier, X = x_train, y = y_train, cv = 10)
@@ -197,16 +214,24 @@ best_parameters = grid_search.best_params_  #{'alpha': 0.01, 'epsilon': 0.9, 'lo
 
 ##grid search 2
 
+
 parameters = [{'loss': ['hinge'], 'penalty': ['l1'], 'alpha': [0.0001, 0.001, 0.002, 0.003, 0.004, 0.005,0.006,0.007,0.008,0.009,0.01, 0.02, 0.03, 0.1],
 				'epsilon': [0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], 'learning_rate': ['optimal']}]
 
-grid_search = GridSearchCV(estimator = classifier,
-                           param_grid = parameters,
-                           scoring = 'accuracy',
-                           n_jobs = -1)
-grid_search = grid_search.fit(x_train, y_train)
-best_accuracy = grid_search.best_score_   
-best_parameters = grid_search.best_params_
+grid_search = []
+best_accuracy = []
+best_parameters = []
+for i in range(10):
+  grid_search_item = GridSearchCV(estimator = classifier,
+                             param_grid = parameters,
+                             scoring = 'accuracy',
+                             n_jobs = -1)
+  grid_search_item = grid_search_item.fit(x_train, y_train)
+  best_accuracy_item = grid_search_item.best_score_   
+  best_parameters_item = grid_search_item.best_params_
+  grid_search.append(grid_search_item)
+  best_accuracy.append(best_accuracy_item)
+  best_parameters.append(best_parameters_item)
 best_accuracy
 best_parameters
 
