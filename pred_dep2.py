@@ -123,7 +123,7 @@ emoticon = pd.get_dummies(x[:, 4])
 fea = pd.concat([marital_status,ethnicity,gender,relationship_status,emoticon], axis =1).values
 
 
-features = ['age','network_size','Positive','Negative','senti_score','post_len'] 
+features = ['age','network_size','Positive','Negative','senti_score'] 
 x2 = data_dep[features].values
 
 fb_fea = np.concatenate((fea, x2), axis=1)
@@ -175,15 +175,18 @@ print(f1_score(y_test,y_pred, average = 'macro'))
 print(precision_score(y_test,y_pred, average = 'macro'))
 print(recall_score(y_test,y_pred, average = 'macro'))
 
-# 0.537867869264
-# 0.537341117801
-# 0.538841093117
+#0.526418600219
+#0.52653907496
+#0.526315789474
+#array([[156,  52],
+#       [ 53,  23]])
 
 
-####SVM no  oversample
 
-clf = SVC(C=1.0, cache_size=200, class_weight=None, coef0=0.0,
-    decision_function_shape='ovr', degree=3, gamma='auto', kernel='linear',
+####SVM no oversample
+
+clf = SVC(C=10, cache_size=200, class_weight='balanced', coef0=0.0,
+    decision_function_shape='ovr', degree=3, gamma='auto', kernel='rbf',
     max_iter=-1, probability=False, random_state=None, shrinking=True,
     tol=0.001, verbose=False)
 clf.fit(x_train, y_train) 
@@ -198,9 +201,20 @@ print(f1_score(y_test,y_pred, average = 'macro'))
 print(precision_score(y_test,y_pred, average = 'macro'))
 print(recall_score(y_test,y_pred, average = 'macro'))
 
-#0.519806763285
-#0.560515873016
-#0.530870445344
+#0.52014160811
+#0.536963036963
+#0.546811740891
+
+
+#array([[118,  90],
+#       [ 36,  40]])
+
+print(accuracy_score(y_test, y_pred))
+#0.556338028169
+
+from sklearn.metrics import *
+
+
 
 
 #####SVM   address imbalanced class
@@ -248,7 +262,7 @@ df_upsampled.iloc[:,-1].value_counts()
 train_x2 = df_upsampled.iloc[:,:-1]
 train_y2 = df_upsampled.iloc[:,-1]
 
-########
+######## test set resample
 
 xy_df2.iloc[:,-1]
 df_majority2 = xy_df2[xy_df2.iloc[:,-1]==1]   ##461
@@ -257,52 +271,47 @@ df_minority2 = xy_df2[xy_df2.iloc[:,-1]==2]   #199
 
  
 # Upsample minority class
-df_minority_upsampled = resample(df_minority, 
+df_minority_upsampled2 = resample(df_minority2, 
                                  replace=True,     # sample with replacement
-                                 n_samples=461,    # to match majority class
-                                 random_state=12) # reproducible results
+                                 n_samples=284,    # to match majority class
+                                 random_state=10) # reproducible results
  
 # Combine majority class with upsampled minority class
-df_upsampled = pd.concat([df_majority, df_minority_upsampled])
+df_upsampled2 = pd.concat([df_majority2, df_minority_upsampled2])
  
 # Display new class counts
-df_upsampled.iloc[:,-1].value_counts()
+df_upsampled2.iloc[:,-1].value_counts()
 
-#2.0    461
-#1.0    461
+#2.0    284
+#1.0    208
 #Name: 5609, dtype: int64
-train_x2 = df_upsampled.iloc[:,:-1]
-train_y2 = df_upsampled.iloc[:,-1]
+test_x2 = df_upsampled2.iloc[:,:-1]
+test_y2 = df_upsampled2.iloc[:,-1]
 
 
 
 #######SVC
 from sklearn.svm import SVC
-clf = SVC(C=1.0, cache_size=200, class_weight=None, coef0=0.0,
-    decision_function_shape='ovr', degree=3, gamma='auto', kernel='linear',
+clf = SVC(C=10, cache_size=200, class_weight=None, coef0=0.0,
+    decision_function_shape='ovr', degree=3, gamma='auto', kernel='rbf',
     max_iter=-1, probability=False, random_state=None, shrinking=True,
     tol=0.001, verbose=False)
-clf.fit(x_train, y_train) 
+clf.fit(train_x2, train_y2) 
 
-y_pred = clf.predict(x_test)
+y_pred = clf.predict(test_x2)
 
-cm = confusion_matrix(y_test, y_pred)
-np.mean(y_pred == y_test)
+cm = confusion_matrix(test_y2, y_pred)
+np.mean(y_pred == test_y2)
 cm
 
-print(f1_score(y_test,y_pred, average = 'macro'))
-print(precision_score(y_test,y_pred, average = 'macro'))
-print(recall_score(y_test,y_pred, average = 'macro'))
+print(f1_score(test_y2,y_pred, average = 'macro'))
+print(precision_score(test_y2,y_pred, average = 'macro'))
+print(recall_score(test_y2,y_pred, average = 'macro'))
 
 ##
-# 0.79091233809
-# 0.807734303913
-# 0.792995049505
-
-
-#confusion matrix
-#array([[137,  63],
-#       [ 20, 182]])
+#0.522261016879
+#0.532608513139
+#0.532875135428
 
 
 
@@ -319,7 +328,11 @@ grid_search_item = GridSearchCV(estimator = clf,
 grid_search = grid_search_item.fit(x_train, y_train)
 
 grid_search.best_score_   
+#0.69999999999999996
+
 grid_search.best_params_
+#{'C': 10, 'gamma': 0.0001, 'kernel': 'rbf'}
+
 
 
 #######do grid search 10 times
@@ -345,10 +358,87 @@ for i in range(10):
 ###10 fold cross validation                        
 accuracies = cross_val_score(estimator = clf, X = x, y = y, cv = 10)
 accuracies.mean()
-#0.8273292627770239
+#
+
+
+# Fitting Naive Bayes to the Training set
+classifier = GaussianNB()
+classifier.fit(train_x2, train_y2)
+
+# Predicting the Test set results
+y_pred = classifier.predict(test_x2)
+
+
+cm = confusion_matrix(test_y2, y_pred)
+np.mean(y_pred == test_y2)
+#0.53658536585365857
+
+
+print(f1_score(y_test,y_pred, average = 'macro'))
+print(precision_score(y_test,y_pred, average = 'macro'))
+print(recall_score(y_test,y_pred, average = 'macro'))
 
 
 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import make_classification
+
+
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.30, random_state = 0)
+
+# x_train, y_train = make_classification(n_samples=1000, n_features=5651,
+#                            n_informative=2, n_redundant=0,
+#                            random_state=0, shuffle=False)
+weight= np.array([2 if i == 2 else 1 for i in y_train])
+clf = RandomForestClassifier(max_depth=3, random_state=0)
+clf.fit(x_train, y_train, sample_weight= weight)
+
+print(clf.feature_importances_)
+
+y_pred = clf.predict(x_test)
+
+cm = confusion_matrix(y_test, y_pred)
+np.mean(y_pred == y_test)
+
+#array([[177,  31],
+#       [ 69,   7]])
+
+print(f1_score(y_test,y_pred, average = 'macro'))
+print(precision_score(y_test,y_pred, average = 'macro'))
+print(recall_score(y_test,y_pred, average = 'macro'))
+
+import pickle
+with open ('randomforest_weighted.pickle'.'wb') as f:
+	pickle.dump(clf,f)
+
+pickle_in =open('randomforest_weighted.pickle')
+
+###oversampling
+
+clf = RandomForestClassifier(max_depth=2, random_state=0)
+clf.fit(train_x2, train_y2)
+
+
+print(clf.feature_importances_)
+
+y_pred = clf.predict(test_x2)
+
+cm = confusion_matrix(test_y2, y_pred)
+np.mean(y_pred == test_y2)
+
+#0.54268292682926833
+
+#array([[120,  88],
+#       [137, 147]])
+
+print(f1_score(test_y2,y_pred, average = 'macro'))
+print(precision_score(test_y2,y_pred, average = 'macro'))
+print(recall_score(test_y2,y_pred, average = 'macro'))
+
+#0.541301510349
+#0.546228992466
+#0.547264355363
 
 ##merge with lda
 lda_500 = pd.read_csv('~/phd_work/crowdflower/lda_500/lda_500.csv')
