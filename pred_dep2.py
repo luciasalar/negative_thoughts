@@ -123,6 +123,14 @@ emoticon = pd.get_dummies(x[:, 4])
 fea = pd.concat([marital_status,ethnicity,gender,relationship_status,emoticon], axis =1).values
 
 
+
+#fea_weka = fea = pd.concat([marital_status,ethnicity,gender,relationship_status,emoticon], axis =1)
+#selected2 = ['age', 'network_size','negative_yn','thoughtcat','Positive','Negative','senti_score','post_len']
+#data_2 = data_dep[selected2]
+
+#data_2.to_csv('data_2.csv')
+
+
 features = ['age','network_size','Positive','Negative','senti_score'] 
 x2 = data_dep[features].values
 
@@ -185,13 +193,13 @@ print(recall_score(y_test,y_pred, average = 'macro'))
 
 ####SVM no oversample
 
-clf = SVC(C=10, cache_size=200, class_weight='balanced', coef0=0.0,
+svc_clf = SVC(C=10, cache_size=200, class_weight='balanced', coef0=0.0,
     decision_function_shape='ovr', degree=3, gamma='auto', kernel='rbf',
     max_iter=-1, probability=False, random_state=None, shrinking=True,
     tol=0.001, verbose=False)
-clf.fit(x_train, y_train) 
+svc_clf.fit(x_train, y_train) 
 
-y_pred = clf.predict(x_test)
+y_pred = svc_clf.predict(x_test)
 
 cm = confusion_matrix(y_test, y_pred)
 np.mean(y_pred == y_test)
@@ -211,6 +219,22 @@ print(recall_score(y_test,y_pred, average = 'macro'))
 
 print(accuracy_score(y_test, y_pred))
 #0.556338028169
+from sklearn.feature_selection import RFECV
+from sklearn.model_selection import StratifiedKFold
+
+svc_clf = SVC(C=10, cache_size=200, class_weight='balanced', coef0=0.0,
+    decision_function_shape='ovr', degree=3, gamma='auto', kernel='linear',
+    max_iter=-1, probability=False, random_state=None, shrinking=True,
+    tol=0.001, verbose=False)
+
+rfecv = RFECV(estimator=svc_clf, step=1, cv=StratifiedKFold(5),
+              scoring='accuracy')
+rfecv.fit(x_train, y_train)
+
+print("Optimal number of features : %d" % rfecv.n_features_)
+
+
+
 
 from sklearn.metrics import *
 
@@ -440,15 +464,82 @@ print(recall_score(test_y2,y_pred, average = 'macro'))
 #0.546228992466
 #0.547264355363
 
+
+########### feature selection 
+
+from sklearn.neighbors import KNeighborsClassifier
+neigh = KNeighborsClassifier(n_neighbors=5)
+neigh.fit(x_train, y_train)
+
+
+y_pred = neigh.predict(x_test)
+
+cm = confusion_matrix(y_test, y_pred)
+np.mean(y_pred == y_test)
+cm
+
+print(f1_score(y_test,y_pred, average = 'macro'))
+print(precision_score(y_test,y_pred, average = 'macro'))
+print(recall_score(y_test,y_pred, average = 'macro'))
+
+#0.553805869074
+#0.572600955276
+#0.552884615385
+
+
+#array([[178,  30],
+#       [ 57,  19]])
+
+
+
+parameters = [{'n_neighbors': [2, 3, 4, 5,6,7,8,9,10]}]
+
+
+grid_search_item = GridSearchCV(estimator = neigh,
+                          param_grid = parameters,
+                           scoring = 'accuracy',
+                           n_jobs = -1)
+grid_search = grid_search_item.fit(x_train, y_train)
+
+grid_search.best_score_   
+#0.69999999999999996
+
+grid_search.best_params_
+
+############feature selection
+
+# feature extraction
+from sklearn.feature_selection import RFE
+from sklearn.linear_model import LogisticRegression
+# load data
+# feature extraction
+neigh = KNeighborsClassifier(n_neighbors=5)
+
+rfe = RFE(neigh, 10)
+fit = rfe.fit(x_train, y_train)
+print("Num Features: %d") % fit.n_features_
+print("Selected Features: %s") % fit.support_
+print("Feature Ranking: %s") % fit.ranking_
+
+
+
+
+
+
+
+
+
+
+
 ##merge with lda
-lda_500 = pd.read_csv('~/phd_work/crowdflower/lda_500/lda_500.csv')
+#lda_500 = pd.read_csv('~/phd_work/crowdflower/lda_500/lda_500.csv')
 
-status_sample = pd.read_csv('~/phd_work/crowdflower/status_sample.csv')
-status_sample = pd.DataFrame(status_sample['text'])
+#status_sample = pd.read_csv('~/phd_work/crowdflower/status_sample.csv')
+#status_sample = pd.DataFrame(status_sample['text'])
 
-lda_500 = pd.concat([status_sample,lda_500], axis =1)
+#lda_500 = pd.concat([status_sample,lda_500], axis =1)
 
-all_fea_lda = pd.merge(data_dep, lda_500, left_on = 'text_y', right_on = 'text', how = 'left')
+#all_fea_lda = pd.merge(data_dep, lda_500, left_on = 'text_y', right_on = 'text', how = 'left')
 
 ####select lda features and convert it to array
-lda2 = all_fea_lda.loc[21:500]
+#lda2 = all_fea_lda.loc[21:500]
